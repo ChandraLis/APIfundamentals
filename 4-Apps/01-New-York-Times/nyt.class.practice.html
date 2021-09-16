@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- this code is copied from the github original repository just for class review -->
+    <h1>NY Times article search</h1>
+
+    <div class="wrapper">
+  
+      <div class="controls">
+        <form>
+          <p>
+            <label for="search">Enter a SINGLE search term (required): </label>
+            <input type="text" id="search" class="search" required>
+          </p>
+          <p>
+            <label for="start-date">Enter a start date (format YYYYMMDD): </label>
+            <input type="date" id="start-date" class="start-date" pattern="[0-9]{8}">
+          </p>
+          <p>
+            <label for="end-date">Enter an end date (format YYYYMMDD): </label>
+            <input type="date" id="end-date" class="end-date" pattern="[0-9]{8}">
+          </p>
+          <p>
+            <button class="submit">Submit search</button>
+          </p>
+        </form>
+      </div>
+  
+      <div class="results">
+        <nav>
+          <button class="prev">Previous 10</button>
+          <button class="next">Next 10</button>
+        </nav>
+  
+        <section>
+        </section>
+      </div>
+  
+    </div>
+  
+    <script>
+    // Defining a baseURL and key to as part of the request URL
+
+
+        // this part was code that Eric posted in slack for review purposes. This does not work at all without the above code.
+
+    const baseURL = 'https://cors-anywhere.herokuapp.com/https://api.nytimes.com/svc/search/v2/articlesearch.json';
+    const key = 'ZqDkjQ09G7Z1BGgscR8IZvVlfQCLRUdq'; // please include your own key
+    let url;  // making a container for url but it is not declared or had value put in, the value is added on line 82
+    
+        // we use .search for selecting an element with a specific class we use ' without .' to look for a specific element
+        //similar to css using  dot notation to call a class and a # for calling a specific ID
+
+    const searchTerm = document.querySelector('.search');
+    const startDate = document.querySelector('.start-date');
+    const endDate = document.querySelector('.end-date');
+    const searchForm = document.querySelector('form');
+    const submitBtn = document.querySelector('.submit');
+    const nextBtn = document.querySelector('.next');
+    const previousBtn = document.querySelector('.prev');
+    const nav = document.querySelector('nav');
+    const section = document.querySelector('section');
+    
+    nav.style.display = 'none';
+    let pageNumber = 0;
+    // console.log('PageNumber:', pageNumber);
+    
+    searchForm.addEventListener('submit', fetchResults);
+    nextBtn.addEventListener('click', nextPage);
+    previousBtn.addEventListener('click', previousPage);
+    
+    function fetchResults(e) {
+        // console.log(e);
+        e.preventDefault();
+    
+        url = `${baseURL}?api-key=${key}&page=${pageNumber}&q=${searchTerm.value}`; //the backticks are used here  for string interpolation
+        // console.log('URL:', url);                                                   // it is taking all of these values and making them into one
+                                                                                     // one value for the variable of URL
+        if (startDate.value !== '') {                                               // ^ this build of url is specific to the NY times API alone
+            // console.log(startDate.value)
+            url += '&begin_date=' + startDate.value;
+            // console.log('URL:', url);
+        }
+    
+        if (endDate.value !== '') {
+            // console.log(endDate.value)
+            url += '&end_date=' + endDate.value;
+            // console.log('URL:', url);
+        }
+    
+        fetch(url)
+            .then(function (result) { // fetch is going to get the url declared above after the information has been given 
+                console.log(result)  //and searched for by the user, then is brought in and turned into json ( clarifying the results into an easier form)
+                return result.json(); // this json here is a method ( the conversion of the raw js data into legible data)
+            })
+            .then(function (json) {
+                console.log(json);
+                displayResults(json); // this json here is a parameter and is the result of the method above and this function is returning the clarified results
+                                        //to the user.
+            })
+    }
+    
+    function displayResults(json) {
+        console.log('Display Results', json);
+        // console.log(json.response.docs);
+    
+        while (section.firstChild) {
+            section.removeChild(section.firstChild); // this erases the first result each time you search for another one 
+        }
+    
+        let articles = json.response.docs; // this is giving the value of the prior search returned results in json form to the variable of 'articles'
+        // console.log(articles);
+    
+        if (articles.length === 0) {        // if the article result above is strictly equal to 0 it shows that there are no results
+            console.log('No results');
+        } else {
+            for (let i = 0; i < articles.length; i++) {    // if the article length is greater than 0, create the elements required to 
+                // console.log(i);                      // display the found results of the previous searchr
+                let article = document.createElement('article');
+                let heading = document.createElement('h2');
+                let link = document.createElement('a');
+                let img = document.createElement('img');
+                let para = document.createElement('p');
+                let clearfix = document.createElement('div');
+                let current = articles[i];  // current is saying look at this particular position within the array of articles (results)
+    
+                // console.log('Current:', current);
+    
+                link.href = current.web_url;   //we are now linking the web url to the current article position found above
+                link.textContent = current.headline.main; // this is connecting the text content of the article to the headline in the link
+                para.textContent = 'Keywords: '; // this is providing a new array
+    
+                for (let j = 0; j < current.keywords.length; j++) {
+                    let span = document.createElement('span');
+                    span.textContent += current.keywords[j].value + ' '; // if there are keywords this appends the current child (result)
+                    para.appendChild(span);                             //and adds a new paragraph for each keyword
+                }
+    
+                if (current.multimedia.length > 0) {      // if the current multimedia length is greater than 0 it links the image from the source to the multimedia
+                    img.src = 'http://www.nytimes.com/' + current.multimedia[0].url; // here we are stepping into the value of the image source and telling it to use the first multimedia image
+                    img.alt = current.headline.main;  // if you hover over the image it will show you the main headline that is attached to the image, this is an alt tag, meant to help with accessibilty in identifying the image for those that may be sensory impaired
+                }
+    
+                clearfix.setAttribute('class', 'clearfix'); 
+                heading.appendChild(link);  // here we are adding the new results from that prior search and adding this information to the elements that we created above. this is running in a loop, doing this for each article result
+                article.appendChild(heading);
+                article.appendChild(img);
+                article.appendChild(para);
+                article.appendChild(clearfix);
+                section.appendChild(article);
+            }
+        }
+    
+        if (articles.length === 10) {   // if the articles are equal to 10,
+            nav.style.display = 'block'; // then we are displaying it in a block form
+        } else {
+            nav.style.display = 'none'; // if not, we do not need to see it in a block
+        }
+    }
+    
+    function nextPage(e) {   // this  is the function for the next page button telling it to go to the next page when it is clicked
+        // console.log('Next button clicked');
+        pageNumber++;           // this makes it move one more page from the one you are on.
+        fetchResults(e);        // this is  invoking the function , getting the results listed on that next page number
+        console.log('Page Number:', pageNumber);
+    }
+    
+    function previousPage(e) {
+        // console.log('Previous button clicked');
+        if (pageNumber > 0) { // if the page number you are on is greater than 0 it will take you back to the previous
+            pageNumber--;  // -- takes you backwards from the page you are currently on
+        } else {
+            return; // if you are on the first page, home page it just returns to the page you are on ( first page) 
+        }
+    
+        fetchResults(e);
+        console.log('Page:', pageNumber);
+    }
+
+
+
+
+
+</body>
+</html>
